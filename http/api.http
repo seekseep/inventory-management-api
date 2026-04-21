@@ -1,0 +1,185 @@
+@baseUrl = http://localhost:8787
+@apiKey = dev-api-key-change-me
+
+### ヘルスチェック
+GET {{baseUrl}}/
+
+### ============================
+### カテゴリ
+### ============================
+
+### カテゴリ一覧
+GET {{baseUrl}}/api/item-categories
+X-API-Key: {{apiKey}}
+
+### カテゴリ作成
+POST {{baseUrl}}/api/item-categories
+X-API-Key: {{apiKey}}
+Content-Type: application/json
+
+{
+  "name": "テストカテゴリ",
+  "description": "テスト用"
+}
+
+### カテゴリ取得
+GET {{baseUrl}}/api/item-categories/cat-tops
+X-API-Key: {{apiKey}}
+
+### ============================
+### 商品
+### ============================
+
+### 商品一覧
+GET {{baseUrl}}/api/items
+X-API-Key: {{apiKey}}
+
+### 商品作成
+POST {{baseUrl}}/api/items
+X-API-Key: {{apiKey}}
+Content-Type: application/json
+
+{
+  "name": "テストTシャツ",
+  "sku": "TEST-WHT-M",
+  "color": "ホワイト",
+  "size": "M",
+  "type": "staple",
+  "status": "active",
+  "price": 4000,
+  "itemCategoryId": "cat-tshirt"
+}
+
+### 商品取得
+GET {{baseUrl}}/api/items/item-000001
+X-API-Key: {{apiKey}}
+
+### ============================
+### 拠点
+### ============================
+
+### 拠点一覧
+GET {{baseUrl}}/api/locations
+X-API-Key: {{apiKey}}
+
+### 拠点作成
+POST {{baseUrl}}/api/locations
+X-API-Key: {{apiKey}}
+Content-Type: application/json
+
+{
+  "name": "テスト店舗",
+  "type": "store",
+  "address": "東京都渋谷区1-1-1"
+}
+
+### ============================
+### 在庫
+### ============================
+
+### 在庫一覧
+GET {{baseUrl}}/api/inventories
+X-API-Key: {{apiKey}}
+
+### 拠点別在庫
+GET {{baseUrl}}/api/inventories?locationId=loc-store-shibuya
+X-API-Key: {{apiKey}}
+
+### 商品別在庫
+GET {{baseUrl}}/api/inventories?itemId=item-000001
+X-API-Key: {{apiKey}}
+
+### ============================
+### トランザクション
+### ============================
+
+### トランザクション一覧
+GET {{baseUrl}}/api/transactions
+X-API-Key: {{apiKey}}
+
+### トランザクション取得（明細付き）
+GET {{baseUrl}}/api/transactions/tx-000001
+X-API-Key: {{apiKey}}
+
+### 仕入れ（purchase）
+POST {{baseUrl}}/api/transactions
+X-API-Key: {{apiKey}}
+Content-Type: application/json
+
+{
+  "toLocationId": "loc-warehouse-main",
+  "type": "purchase",
+  "note": "テスト仕入れ",
+  "items": [
+    { "itemId": "item-000001", "quantity": 10 },
+    { "itemId": "item-000002", "quantity": 5 }
+  ]
+}
+
+### 移動（transfer）
+POST {{baseUrl}}/api/transactions
+X-API-Key: {{apiKey}}
+Content-Type: application/json
+
+{
+  "fromLocationId": "loc-warehouse-main",
+  "toLocationId": "loc-store-shibuya",
+  "type": "transfer",
+  "note": "渋谷店へ補充",
+  "items": [
+    { "itemId": "item-000001", "quantity": 3 }
+  ]
+}
+
+### 販売（sale）
+POST {{baseUrl}}/api/transactions
+X-API-Key: {{apiKey}}
+Content-Type: application/json
+
+{
+  "fromLocationId": "loc-store-shibuya",
+  "type": "sale",
+  "items": [
+    { "itemId": "item-000001", "quantity": 1 }
+  ]
+}
+
+### 廃棄（disposal）
+POST {{baseUrl}}/api/transactions
+X-API-Key: {{apiKey}}
+Content-Type: application/json
+
+{
+  "fromLocationId": "loc-warehouse-main",
+  "type": "disposal",
+  "note": "不良品廃棄",
+  "items": [
+    { "itemId": "item-000002", "quantity": 2 }
+  ]
+}
+
+### ============================
+### 棚卸し
+### ============================
+
+### 棚卸し一覧
+GET {{baseUrl}}/api/snapshots
+X-API-Key: {{apiKey}}
+
+### 棚卸し取得（明細付き）
+GET {{baseUrl}}/api/snapshots/snap-000001
+X-API-Key: {{apiKey}}
+
+### 棚卸し作成
+POST {{baseUrl}}/api/snapshots
+X-API-Key: {{apiKey}}
+Content-Type: application/json
+
+{
+  "locationId": "loc-store-shibuya",
+  "note": "月次棚卸し",
+  "items": [
+    { "itemId": "item-000001", "quantity": 5, "expectedQuantity": 6 },
+    { "itemId": "item-000002", "quantity": 3, "expectedQuantity": 3 }
+  ]
+}

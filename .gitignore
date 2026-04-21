@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Cloudflare
+.wrangler/
+
+# Secrets
+.env
+.dev.vars
+
+# Generated
+seeds/seed.sql
+
+# OS
+.DS_Store
+
+# Editor
+*.swp
+*.swo
