@@ -474,6 +474,13 @@ function toSQL(data: ReturnType<typeof generate>): string {
   lines.push("-- 5 years: 2020-04 to 2025-03");
   lines.push("");
 
+  // API Keys
+  lines.push("-- API Keys");
+  lines.push(
+    `INSERT INTO api_keys (id, name, key, active, created_at, updated_at) VALUES ('apikey-001', 'dev', 'dev-api-key-change-me', 1, '2025-03-31T00:00:00Z', '2025-03-31T00:00:00Z');`
+  );
+  lines.push("");
+
   // Categories
   lines.push("-- Categories");
   for (const cat of categories) {

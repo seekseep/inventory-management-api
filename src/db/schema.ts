@@ -1,5 +1,14 @@
 import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 
+export const apiKeys = sqliteTable("api_keys", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  key: text("key").notNull().unique(),
+  active: integer("active", { mode: "boolean" }).notNull().default(true),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
 export const itemCategories = sqliteTable("item_categories", {
   id: text("id").primaryKey(),
   parentId: text("parent_id").references((): any => itemCategories.id),

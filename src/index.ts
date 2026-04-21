@@ -10,7 +10,6 @@ import { snapshotsRoute } from "./routes/snapshots";
 export type Env = {
   Bindings: {
     DB: D1Database;
-    API_KEY: string;
   };
 };
 
