@@ -1,9 +1,10 @@
 name = "inventory-management-api"
 main = "src/index.ts"
 compatibility_date = "2024-12-01"
+account_id = "f7236e4957289b4ef6c59a6c2c489ff2"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "inventory-db"
-database_id = "placeholder-change-me"
+database_id = "2dc87086-4fec-45a5-a33e-e08afe803606"
 migrations_dir = "drizzle"
