@@ -242,13 +242,13 @@ export const openApiSpec = {
     },
     "/api/transactions": {
       get: {
-        tags: ["トランザクション"],
-        summary: "トランザクション一覧",
+        tags: ["取引"],
+        summary: "取引一覧",
         responses: { "200": { description: "OK", content: { "application/json": { schema: { type: "array", items: { $ref: "#/components/schemas/Transaction" } } } } } },
       },
       post: {
-        tags: ["トランザクション"],
-        summary: "トランザクション作成",
+        tags: ["取引"],
+        summary: "取引作成",
         description: "仕入れ(purchase): toLocationIdのみ指定\n移動(transfer): from/to両方指定\n販売(sale): fromLocationIdのみ指定\n廃棄(disposal): fromLocationIdのみ指定",
         requestBody: {
           required: true,
@@ -273,8 +273,8 @@ export const openApiSpec = {
     },
     "/api/transactions/{id}": {
       get: {
-        tags: ["トランザクション"],
-        summary: "トランザクション取得（明細付き）",
+        tags: ["取引"],
+        summary: "取引取得（明細付き）",
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
         responses: { "200": { description: "OK" }, "404": { description: "Not found" } },
       },

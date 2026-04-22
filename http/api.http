@@ -90,14 +90,14 @@ GET {{baseUrl}}/api/inventories?itemId=item-000001
 X-API-Key: {{apiKey}}
 
 ### ============================
-### トランザクション
+### 取引
 ### ============================
 
-### トランザクション一覧
+### 取引一覧
 GET {{baseUrl}}/api/transactions
 X-API-Key: {{apiKey}}
 
-### トランザクション取得（明細付き）
+### 取引取得（明細付き）
 GET {{baseUrl}}/api/transactions/tx-000001
 X-API-Key: {{apiKey}}
 

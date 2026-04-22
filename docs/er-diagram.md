@@ -45,7 +45,7 @@ erDiagram
         text updated_at "更新日時"
     }
 
-    inventory_transactions["在庫トランザクション (inventory_transactions)"] {
+    inventory_transactions["在庫取引 (inventory_transactions)"] {
         text id PK
         text from_location_id FK "出元拠点ID (nullable)"
         text to_location_id FK "先拠点ID (nullable)"
@@ -54,9 +54,9 @@ erDiagram
         text created_at "作成日時"
     }
 
-    inventory_transaction_items["トランザクション明細 (inventory_transaction_items)"] {
+    inventory_transaction_items["取引明細 (inventory_transaction_items)"] {
         text id PK
-        text transaction_id FK "トランザクションID"
+        text transaction_id FK "取引ID"
         text item_id FK "商品ID"
         integer quantity "数量"
     }

@@ -80,7 +80,7 @@ stateDiagram-v2
 
 ## シードデータ生成方針
 
-- TypeScript スクリプトで5年分のトランザクションを生成
+- TypeScript スクリプトで5年分の取引を生成
 - D1 に流し込める SQL ファイルを出力
 - もしくは Drizzle 経由で直接 D1 に書き込み
 
