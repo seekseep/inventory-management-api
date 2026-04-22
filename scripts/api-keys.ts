@@ -8,11 +8,17 @@ import inquirer from "inquirer";
 
 function exec(sql: string): any[] {
   const escaped = sql.replace(/"/g, '\\"');
-  const result = execSync(
-    `npx wrangler d1 execute inventory-db --remote --json --command="${escaped}"`,
-    { encoding: "utf-8" }
-  );
-  return JSON.parse(result)[0]?.results ?? [];
+  try {
+    const result = execSync(
+      `npx wrangler d1 execute inventory-db --remote --json --command="${escaped}"`,
+      { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }
+    );
+    return JSON.parse(result)[0]?.results ?? [];
+  } catch (e: any) {
+    const output = e.stdout?.toString() || e.stderr?.toString() || e.message;
+    console.error("D1 実行エラー:", output);
+    process.exit(1);
+  }
 }
 
 function genKey(): string {

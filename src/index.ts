@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 import { swaggerUI } from "@hono/swagger-ui";
 import { authMiddleware } from "./middleware/auth";
 import { itemCategoriesRoute } from "./routes/item-categories";
@@ -16,6 +17,8 @@ export type Env = {
 };
 
 const app = new Hono<Env>();
+
+app.use("*", cors());
 
 // Swagger UI（認証不要）
 app.get("/docs", swaggerUI({ url: "/openapi.json" }));
