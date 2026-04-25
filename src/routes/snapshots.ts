@@ -48,7 +48,7 @@ snapshotsRoute.post("/", async (c) => {
     await db.insert(inventorySnapshotItems).values({
       id: crypto.randomUUID(),
       snapshotId: id,
-      itemId: item.itemId,
+      itemVariantId: item.itemVariantId,
       quantity: item.quantity,
       expectedQuantity: item.expectedQuantity,
     });

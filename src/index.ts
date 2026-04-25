@@ -4,6 +4,7 @@ import { swaggerUI } from "@hono/swagger-ui";
 import { authMiddleware } from "./middleware/auth";
 import { itemCategoriesRoute } from "./routes/item-categories";
 import { itemsRoute } from "./routes/items";
+import { itemVariantsRoute } from "./routes/item-variants";
 import { locationsRoute } from "./routes/locations";
 import { inventoriesRoute } from "./routes/inventories";
 import { transactionsRoute } from "./routes/transactions";
@@ -28,6 +29,7 @@ app.use("/api/*", authMiddleware);
 
 app.route("/api/item-categories", itemCategoriesRoute);
 app.route("/api/items", itemsRoute);
+app.route("/api/item-variants", itemVariantsRoute);
 app.route("/api/locations", locationsRoute);
 app.route("/api/inventories", inventoriesRoute);
 app.route("/api/transactions", transactionsRoute);

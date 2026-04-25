@@ -9,21 +9,21 @@ export const inventoriesRoute = new Hono<Env>();
 inventoriesRoute.get("/", async (c) => {
   const db = drizzle(c.env.DB);
   const locationId = c.req.query("locationId");
-  const itemId = c.req.query("itemId");
+  const itemVariantId = c.req.query("itemVariantId");
 
   let query = db.select().from(inventories);
 
-  if (locationId && itemId) {
+  if (locationId && itemVariantId) {
     query = query.where(
       and(
         eq(inventories.locationId, locationId),
-        eq(inventories.itemId, itemId)
+        eq(inventories.itemVariantId, itemVariantId)
       )
     ) as typeof query;
   } else if (locationId) {
     query = query.where(eq(inventories.locationId, locationId)) as typeof query;
-  } else if (itemId) {
-    query = query.where(eq(inventories.itemId, itemId)) as typeof query;
+  } else if (itemVariantId) {
+    query = query.where(eq(inventories.itemVariantId, itemVariantId)) as typeof query;
   }
 
   const results = await query;

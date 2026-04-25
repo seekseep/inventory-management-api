@@ -31,10 +31,7 @@ itemsRoute.post("/", async (c) => {
   await db.insert(items).values({
     id,
     name: body.name,
-    sku: body.sku,
     description: body.description ?? null,
-    color: body.color ?? null,
-    size: body.size ?? null,
     type: body.type,
     status: body.status,
     season: body.season ?? null,
@@ -56,10 +53,7 @@ itemsRoute.put("/:id", async (c) => {
     .update(items)
     .set({
       name: body.name,
-      sku: body.sku,
       description: body.description,
-      color: body.color,
-      size: body.size,
       type: body.type,
       status: body.status,
       season: body.season,

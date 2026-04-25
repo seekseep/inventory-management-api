@@ -11,18 +11,25 @@ erDiagram
         text updated_at "更新日時"
     }
 
-    items["商品SKU (items)"] {
+    items["商品 (items)"] {
         text id PK
         text name "名前"
-        text sku UK "SKU (例: SLIM-DENIM-BLK-M)"
         text description "説明"
-        text color "カラー"
-        text size "サイズ (S/M/L/XL/FREE等)"
         text type "種別: staple | seasonal | limited"
         text status "状態: draft | active | on_sale | discontinued"
         text season "シーズン: SS2020, AW2024 など (nullable)"
         integer price "販売価格"
         text item_category_id FK "商品カテゴリID"
+        text created_at "作成日時"
+        text updated_at "更新日時"
+    }
+
+    item_variants["商品バリアント (item_variants)"] {
+        text id PK
+        text item_id FK "商品ID"
+        text sku UK "SKU (例: SLIM-DENIM-BLK-M)"
+        text color "カラー"
+        text size "サイズ (S/M/L/XL/FREE等)"
         text created_at "作成日時"
         text updated_at "更新日時"
     }
@@ -38,7 +45,7 @@ erDiagram
 
     inventories["在庫 (inventories)"] {
         text id PK
-        text item_id FK "商品ID"
+        text item_variant_id FK "バリアントID"
         text location_id FK "拠点ID"
         integer quantity "現在数量"
         integer safety_stock "安全在庫数"
@@ -57,7 +64,7 @@ erDiagram
     inventory_transaction_items["取引明細 (inventory_transaction_items)"] {
         text id PK
         text transaction_id FK "取引ID"
-        text item_id FK "商品ID"
+        text item_variant_id FK "バリアントID"
         integer quantity "数量"
     }
 
@@ -71,20 +78,21 @@ erDiagram
     inventory_snapshot_items["棚卸し明細 (inventory_snapshot_items)"] {
         text id PK
         text snapshot_id FK "棚卸しID"
-        text item_id FK "商品ID"
+        text item_variant_id FK "バリアントID"
         integer quantity "実数"
         integer expected_quantity "理論値"
     }
 
     item_categories ||--o{ item_categories : "parent"
     item_categories ||--o{ items : "has"
-    items ||--o{ inventories : "stocked in"
+    items ||--o{ item_variants : "has variants"
+    item_variants ||--o{ inventories : "stocked in"
     locations ||--o{ inventories : "stores"
     locations ||--o{ inventory_transactions : "from"
     locations ||--o{ inventory_transactions : "to"
     inventory_transactions ||--o{ inventory_transaction_items : "contains"
-    items ||--o{ inventory_transaction_items : "moved"
+    item_variants ||--o{ inventory_transaction_items : "moved"
     locations ||--o{ inventory_snapshots : "counted at"
     inventory_snapshots ||--o{ inventory_snapshot_items : "contains"
-    items ||--o{ inventory_snapshot_items : "counted"
+    item_variants ||--o{ inventory_snapshot_items : "counted"
 ```

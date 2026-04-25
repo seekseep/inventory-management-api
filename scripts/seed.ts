@@ -43,15 +43,12 @@ function escSQL(s: string | null): string {
 }
 
 // ============================================
-// SKU 生成
+// Item & Variant 生成
 // ============================================
 
-type SKU = {
+type ItemDef = {
   id: string;
   name: string;
-  sku: string;
-  color: string;
-  size: string;
   type: "staple" | "seasonal" | "limited";
   status: "draft" | "active" | "on_sale" | "discontinued";
   season: string | null;
@@ -63,32 +60,50 @@ type SKU = {
   safetyStock: number;
 };
 
-function generateSKUs(styles: StyleDef[]): SKU[] {
-  const skus: SKU[] = [];
+type VariantDef = {
+  id: string;
+  itemId: string;
+  sku: string;
+  color: string;
+  size: string;
+};
+
+function generateItemsAndVariants(styles: StyleDef[]): { items: ItemDef[]; variants: VariantDef[] } {
+  const items: ItemDef[] = [];
+  const variants: VariantDef[] = [];
+
   for (const style of styles) {
+    const itemId = genId("item");
+    items.push({
+      id: itemId,
+      name: style.name,
+      type: style.type,
+      status: "draft",
+      season: style.season ?? null,
+      price: style.price,
+      categoryId: style.categoryId,
+      activeFrom: style.activeFrom,
+      onSaleFrom: style.onSaleFrom,
+      discontinuedFrom: style.discontinuedFrom,
+      safetyStock: style.safetyStock,
+    });
+
     for (const color of style.colors) {
       for (const size of style.sizes) {
         const skuCode = `${style.name.slice(0, 8)}-${color.slice(0, 3)}-${size}`.replace(/\s/g, "");
-        skus.push({
-          id: genId("item"),
-          name: style.name,
+        const variantId = genId("iv");
+        variants.push({
+          id: variantId,
+          itemId,
           sku: skuCode + "-" + String(idCounter),
           color,
           size,
-          type: style.type,
-          status: "draft",
-          season: style.season ?? null,
-          price: style.price,
-          categoryId: style.categoryId,
-          activeFrom: style.activeFrom,
-          onSaleFrom: style.onSaleFrom,
-          discontinuedFrom: style.discontinuedFrom,
-          safetyStock: style.safetyStock,
         });
       }
     }
   }
-  return skus;
+
+  return { items, variants };
 }
 
 // ============================================
@@ -102,10 +117,10 @@ type Transaction = {
   type: "purchase" | "transfer" | "sale" | "disposal";
   note: string | null;
   createdAt: string;
-  items: { itemId: string; quantity: number }[];
+  items: { itemVariantId: string; quantity: number }[];
 };
 
-type Inventory = Map<string, number>; // key: `${itemId}:${locationId}` → quantity
+type Inventory = Map<string, number>; // key: `${variantId}:${locationId}` → quantity
 
 function getActiveLocations(date: Date): LocationDef[] {
   return locations.filter((loc) => {
@@ -123,18 +138,22 @@ function getActiveWarehouses(date: Date): LocationDef[] {
   return getActiveLocations(date).filter((l) => l.type === "warehouse");
 }
 
-function getActiveSKUs(date: Date, allSKUs: SKU[]): SKU[] {
-  return allSKUs.filter((sku) => {
-    const active = new Date(sku.activeFrom);
-    const disc = sku.discontinuedFrom ? new Date(sku.discontinuedFrom) : null;
+type VariantWithItem = VariantDef & {
+  item: ItemDef;
+};
+
+function getActiveVariants(date: Date, allVariantsWithItems: VariantWithItem[]): VariantWithItem[] {
+  return allVariantsWithItems.filter((v) => {
+    const active = new Date(v.item.activeFrom);
+    const disc = v.item.discontinuedFrom ? new Date(v.item.discontinuedFrom) : null;
     return date >= active && (!disc || date <= disc);
   });
 }
 
-function getSKUStatus(sku: SKU, date: Date): SKU["status"] {
-  if (sku.discontinuedFrom && date >= new Date(sku.discontinuedFrom)) return "discontinued";
-  if (sku.onSaleFrom && date >= new Date(sku.onSaleFrom)) return "on_sale";
-  if (date >= new Date(sku.activeFrom)) return "active";
+function getItemStatus(item: ItemDef, date: Date): ItemDef["status"] {
+  if (item.discontinuedFrom && date >= new Date(item.discontinuedFrom)) return "discontinued";
+  if (item.onSaleFrom && date >= new Date(item.onSaleFrom)) return "on_sale";
+  if (date >= new Date(item.activeFrom)) return "active";
   return "draft";
 }
 
@@ -232,22 +251,29 @@ const phases: PhaseConfig[] = [
 // ============================================
 
 function generate() {
-  const allSKUs = [
-    ...generateSKUs(stapleStyles),
-    ...generateSKUs(seasonalStyles),
-    ...generateSKUs(limitedStyles),
-  ];
+  const staple = generateItemsAndVariants(stapleStyles);
+  const seasonal = generateItemsAndVariants(seasonalStyles);
+  const limited = generateItemsAndVariants(limitedStyles);
+
+  const allItems = [...staple.items, ...seasonal.items, ...limited.items];
+  const allVariants = [...staple.variants, ...seasonal.variants, ...limited.variants];
+
+  // Variant に親 Item の情報を付与
+  const allVariantsWithItems: VariantWithItem[] = allVariants.map((v) => ({
+    ...v,
+    item: allItems.find((i) => i.id === v.itemId)!,
+  }));
 
   const transactions: Transaction[] = [];
   const inventory: Inventory = new Map();
-  const snapshots: { id: string; locationId: string; note: string; createdAt: string; items: { itemId: string; quantity: number; expectedQuantity: number }[] }[] = [];
+  const snapshots: { id: string; locationId: string; note: string; createdAt: string; items: { itemVariantId: string; quantity: number; expectedQuantity: number }[] }[] = [];
 
-  function getInv(itemId: string, locationId: string): number {
-    return inventory.get(`${itemId}:${locationId}`) ?? 0;
+  function getInv(variantId: string, locationId: string): number {
+    return inventory.get(`${variantId}:${locationId}`) ?? 0;
   }
 
-  function setInv(itemId: string, locationId: string, qty: number) {
-    inventory.set(`${itemId}:${locationId}`, Math.max(0, qty));
+  function setInv(variantId: string, locationId: string, qty: number) {
+    inventory.set(`${variantId}:${locationId}`, Math.max(0, qty));
   }
 
   for (const phase of phases) {
@@ -274,14 +300,13 @@ function generate() {
         if (phase.snapshotMonthly) {
           const activeLocations = getActiveLocations(current);
           for (const loc of activeLocations) {
-            const snapshotItems: { itemId: string; quantity: number; expectedQuantity: number }[] = [];
-            for (const sku of getActiveSKUs(current, allSKUs)) {
-              const qty = getInv(sku.id, loc.id);
-              if (qty > 0 || sku.safetyStock > 0) {
-                // Small random variance for realism
+            const snapshotItems: { itemVariantId: string; quantity: number; expectedQuantity: number }[] = [];
+            for (const variant of getActiveVariants(current, allVariantsWithItems)) {
+              const qty = getInv(variant.id, loc.id);
+              if (qty > 0 || variant.item.safetyStock > 0) {
                 const variance = Math.random() < 0.05 ? randomInt(-2, -1) : 0;
                 snapshotItems.push({
-                  itemId: sku.id,
+                  itemVariantId: variant.id,
                   quantity: Math.max(0, qty + variance),
                   expectedQuantity: qty,
                 });
@@ -306,11 +331,11 @@ function generate() {
         transfersThisWeek = 0;
       }
 
-      const activeSKUs = getActiveSKUs(current, allSKUs);
+      const activeVariants = getActiveVariants(current, allVariantsWithItems);
       const activeStores = getActiveStores(current);
       const activeWarehouses = getActiveWarehouses(current);
 
-      if (activeSKUs.length === 0 || activeStores.length === 0) {
+      if (activeVariants.length === 0 || activeStores.length === 0) {
         current = addDays(current, 1);
         dayInMonth++;
         dayInWeek++;
@@ -322,16 +347,16 @@ function generate() {
       const purchaseInterval = Math.floor(daysInMonth / Math.max(1, phase.purchaseFreqPerMonth));
       if (dayInMonth % purchaseInterval === 0 && purchasesThisMonth < phase.purchaseFreqPerMonth) {
         const warehouse = randomPick(activeWarehouses);
-        const skusToOrder = activeSKUs
-          .filter((s) => getSKUStatus(s, current) === "active")
+        const variantsToOrder = activeVariants
+          .filter((v) => getItemStatus(v.item, current) === "active")
           .filter(() => Math.random() < 0.3)
           .slice(0, randomInt(10, 40));
 
-        if (skusToOrder.length > 0) {
-          const txItems = skusToOrder.map((sku) => {
+        if (variantsToOrder.length > 0) {
+          const txItems = variantsToOrder.map((variant) => {
             const qty = randomInt(...phase.purchaseQtyPerSKU);
-            setInv(sku.id, warehouse.id, getInv(sku.id, warehouse.id) + qty);
-            return { itemId: sku.id, quantity: qty };
+            setInv(variant.id, warehouse.id, getInv(variant.id, warehouse.id) + qty);
+            return { itemVariantId: variant.id, quantity: qty };
           });
 
           transactions.push({
@@ -351,18 +376,18 @@ function generate() {
       if (transfersThisWeek < phase.transferFreqPerWeek && dayInWeek % 2 === 0) {
         const warehouse = randomPick(activeWarehouses);
         const store = randomPick(activeStores);
-        const skusToTransfer = activeSKUs
-          .filter((s) => getInv(s.id, warehouse.id) > 0)
+        const variantsToTransfer = activeVariants
+          .filter((v) => getInv(v.id, warehouse.id) > 0)
           .filter(() => Math.random() < 0.3)
           .slice(0, randomInt(5, 20));
 
-        if (skusToTransfer.length > 0) {
-          const txItems = skusToTransfer.map((sku) => {
-            const available = getInv(sku.id, warehouse.id);
+        if (variantsToTransfer.length > 0) {
+          const txItems = variantsToTransfer.map((variant) => {
+            const available = getInv(variant.id, warehouse.id);
             const qty = Math.min(available, randomInt(...phase.transferQtyPerSKU));
-            setInv(sku.id, warehouse.id, getInv(sku.id, warehouse.id) - qty);
-            setInv(sku.id, store.id, getInv(sku.id, store.id) + qty);
-            return { itemId: sku.id, quantity: qty };
+            setInv(variant.id, warehouse.id, getInv(variant.id, warehouse.id) - qty);
+            setInv(variant.id, store.id, getInv(variant.id, store.id) + qty);
+            return { itemVariantId: variant.id, quantity: qty };
           });
 
           transactions.push({
@@ -380,27 +405,26 @@ function generate() {
 
       // --- Sale (販売) ---
       const salesToday = randomInt(...phase.salesPerDay);
-      const saleableInStores = activeSKUs.filter((sku) =>
-        activeStores.some((store) => getInv(sku.id, store.id) > 0)
+      const saleableInStores = activeVariants.filter((variant) =>
+        activeStores.some((store) => getInv(variant.id, store.id) > 0)
       );
 
       if (saleableInStores.length > 0) {
-        // Group sales by store
         for (const store of activeStores) {
           const storeShare = Math.ceil(salesToday / activeStores.length);
-          const storeSKUs = saleableInStores.filter(
-            (sku) => getInv(sku.id, store.id) > 0
+          const storeVariants = saleableInStores.filter(
+            (variant) => getInv(variant.id, store.id) > 0
           );
-          if (storeSKUs.length === 0) continue;
+          if (storeVariants.length === 0) continue;
 
-          const txItems: { itemId: string; quantity: number }[] = [];
-          for (let i = 0; i < storeShare && storeSKUs.length > 0; i++) {
-            const sku = randomPick(storeSKUs);
-            const available = getInv(sku.id, store.id);
+          const txItems: { itemVariantId: string; quantity: number }[] = [];
+          for (let i = 0; i < storeShare && storeVariants.length > 0; i++) {
+            const variant = randomPick(storeVariants);
+            const available = getInv(variant.id, store.id);
             if (available <= 0) continue;
             const qty = 1;
-            setInv(sku.id, store.id, available - qty);
-            txItems.push({ itemId: sku.id, quantity: qty });
+            setInv(variant.id, store.id, available - qty);
+            txItems.push({ itemVariantId: variant.id, quantity: qty });
           }
 
           if (txItems.length > 0) {
@@ -420,18 +444,18 @@ function generate() {
       // --- Disposal (廃棄) ---
       if (phase.disposalPerMonth > 0 && disposalsThisMonth < phase.disposalPerMonth && dayInMonth === 15) {
         const warehouse = randomPick(activeWarehouses);
-        const disposalCandidates = allSKUs.filter(
-          (sku) =>
-            getSKUStatus(sku, current) === "on_sale" ||
-            getSKUStatus(sku, current) === "discontinued"
-        ).filter((sku) => getInv(sku.id, warehouse.id) > 0);
+        const disposalCandidates = allVariantsWithItems.filter(
+          (v) =>
+            getItemStatus(v.item, current) === "on_sale" ||
+            getItemStatus(v.item, current) === "discontinued"
+        ).filter((v) => getInv(v.id, warehouse.id) > 0);
 
         if (disposalCandidates.length > 0) {
           const toDispose = disposalCandidates.slice(0, randomInt(3, 10));
-          const txItems = toDispose.map((sku) => {
-            const qty = Math.min(getInv(sku.id, warehouse.id), randomInt(1, 3));
-            setInv(sku.id, warehouse.id, getInv(sku.id, warehouse.id) - qty);
-            return { itemId: sku.id, quantity: qty };
+          const txItems = toDispose.map((variant) => {
+            const qty = Math.min(getInv(variant.id, warehouse.id), randomInt(1, 3));
+            setInv(variant.id, warehouse.id, getInv(variant.id, warehouse.id) - qty);
+            return { itemVariantId: variant.id, quantity: qty };
           });
 
           transactions.push({
@@ -453,13 +477,13 @@ function generate() {
     }
   }
 
-  // Update SKU statuses to final state
+  // Update Item statuses to final state
   const finalDate = new Date("2025-03-31");
-  for (const sku of allSKUs) {
-    sku.status = getSKUStatus(sku, finalDate);
+  for (const item of allItems) {
+    item.status = getItemStatus(item, finalDate);
   }
 
-  return { allSKUs, transactions, inventory, snapshots };
+  return { allItems, allVariants, transactions, inventory, snapshots };
 }
 
 // ============================================
@@ -499,11 +523,20 @@ function toSQL(data: ReturnType<typeof generate>): string {
   }
   lines.push("");
 
-  // Items (SKUs)
+  // Items (商品)
   lines.push("-- Items");
-  for (const sku of data.allSKUs) {
+  for (const item of data.allItems) {
     lines.push(
-      `INSERT INTO items (id, name, sku, description, color, size, type, status, season, price, item_category_id, created_at, updated_at) VALUES (${escSQL(sku.id)}, ${escSQL(sku.name)}, ${escSQL(sku.sku)}, NULL, ${escSQL(sku.color)}, ${escSQL(sku.size)}, ${escSQL(sku.type)}, ${escSQL(sku.status)}, ${escSQL(sku.season)}, ${sku.price}, ${escSQL(sku.categoryId)}, ${escSQL(sku.activeFrom + "T00:00:00Z")}, ${escSQL(now)});`
+      `INSERT INTO items (id, name, description, type, status, season, price, item_category_id, created_at, updated_at) VALUES (${escSQL(item.id)}, ${escSQL(item.name)}, NULL, ${escSQL(item.type)}, ${escSQL(item.status)}, ${escSQL(item.season)}, ${item.price}, ${escSQL(item.categoryId)}, ${escSQL(item.activeFrom + "T00:00:00Z")}, ${escSQL(now)});`
+    );
+  }
+  lines.push("");
+
+  // Item Variants (バリアント)
+  lines.push("-- Item Variants");
+  for (const variant of data.allVariants) {
+    lines.push(
+      `INSERT INTO item_variants (id, item_id, sku, color, size, created_at, updated_at) VALUES (${escSQL(variant.id)}, ${escSQL(variant.itemId)}, ${escSQL(variant.sku)}, ${escSQL(variant.color)}, ${escSQL(variant.size)}, ${escSQL(now)}, ${escSQL(now)});`
     );
   }
   lines.push("");
@@ -512,11 +545,12 @@ function toSQL(data: ReturnType<typeof generate>): string {
   lines.push("-- Inventories (final state)");
   for (const [key, qty] of data.inventory) {
     if (qty <= 0) continue;
-    const [itemId, locationId] = key.split(":");
-    const sku = data.allSKUs.find((s) => s.id === itemId);
-    const safetyStock = sku?.safetyStock ?? 0;
+    const [variantId, locationId] = key.split(":");
+    const variant = data.allVariants.find((v) => v.id === variantId);
+    const item = variant ? data.allItems.find((i) => i.id === variant.itemId) : null;
+    const safetyStock = item?.safetyStock ?? 0;
     lines.push(
-      `INSERT INTO inventories (id, item_id, location_id, quantity, safety_stock, updated_at) VALUES (${escSQL(genId("inv"))}, ${escSQL(itemId)}, ${escSQL(locationId)}, ${qty}, ${safetyStock}, ${escSQL(now)});`
+      `INSERT INTO inventories (id, item_variant_id, location_id, quantity, safety_stock, updated_at) VALUES (${escSQL(genId("inv"))}, ${escSQL(variantId)}, ${escSQL(locationId)}, ${qty}, ${safetyStock}, ${escSQL(now)});`
     );
   }
   lines.push("");
@@ -529,7 +563,7 @@ function toSQL(data: ReturnType<typeof generate>): string {
     );
     for (const item of tx.items) {
       lines.push(
-        `INSERT INTO inventory_transaction_items (id, transaction_id, item_id, quantity) VALUES (${escSQL(genId("txi"))}, ${escSQL(tx.id)}, ${escSQL(item.itemId)}, ${item.quantity});`
+        `INSERT INTO inventory_transaction_items (id, transaction_id, item_variant_id, quantity) VALUES (${escSQL(genId("txi"))}, ${escSQL(tx.id)}, ${escSQL(item.itemVariantId)}, ${item.quantity});`
       );
     }
   }
@@ -543,7 +577,7 @@ function toSQL(data: ReturnType<typeof generate>): string {
     );
     for (const item of snap.items) {
       lines.push(
-        `INSERT INTO inventory_snapshot_items (id, snapshot_id, item_id, quantity, expected_quantity) VALUES (${escSQL(genId("snpi"))}, ${escSQL(snap.id)}, ${escSQL(item.itemId)}, ${item.quantity}, ${item.expectedQuantity});`
+        `INSERT INTO inventory_snapshot_items (id, snapshot_id, item_variant_id, quantity, expected_quantity) VALUES (${escSQL(genId("snpi"))}, ${escSQL(snap.id)}, ${escSQL(item.itemVariantId)}, ${item.quantity}, ${item.expectedQuantity});`
       );
     }
   }
@@ -557,7 +591,8 @@ function toSQL(data: ReturnType<typeof generate>): string {
 
 console.log("Generating seed data...");
 const data = generate();
-console.log(`  SKUs: ${data.allSKUs.length}`);
+console.log(`  Items: ${data.allItems.length}`);
+console.log(`  Variants: ${data.allVariants.length}`);
 console.log(`  Transactions: ${data.transactions.length}`);
 console.log(`  Transaction items: ${data.transactions.reduce((sum, tx) => sum + tx.items.length, 0)}`);
 console.log(`  Snapshots: ${data.snapshots.length}`);

@@ -54,25 +54,17 @@ transactionsRoute.post("/", async (c) => {
     await db.insert(inventoryTransactionItems).values({
       id: crypto.randomUUID(),
       transactionId: id,
-      itemId: item.itemId,
+      itemVariantId: item.itemVariantId,
       quantity: item.quantity,
     });
 
     // Update inventory quantities
     if (body.fromLocationId) {
-      await db
-        .update(inventories)
-        .set({
-          quantity: db.$count(inventories, eq(inventories.id, "")) as any, // handled below
-          updatedAt: now,
-        });
       // Decrement from source
       const existing = await db
         .select()
         .from(inventories)
-        .where(
-          eq(inventories.itemId, item.itemId)
-        );
+        .where(eq(inventories.itemVariantId, item.itemVariantId));
       const fromInv = existing.find(
         (inv) => inv.locationId === body.fromLocationId
       );
@@ -89,7 +81,7 @@ transactionsRoute.post("/", async (c) => {
       const existing = await db
         .select()
         .from(inventories)
-        .where(eq(inventories.itemId, item.itemId));
+        .where(eq(inventories.itemVariantId, item.itemVariantId));
       const toInv = existing.find(
         (inv) => inv.locationId === body.toLocationId
       );
@@ -101,7 +93,7 @@ transactionsRoute.post("/", async (c) => {
       } else {
         await db.insert(inventories).values({
           id: crypto.randomUUID(),
-          itemId: item.itemId,
+          itemVariantId: item.itemVariantId,
           locationId: body.toLocationId,
           quantity: item.quantity,
           safetyStock: 0,

@@ -3,7 +3,7 @@ export const openApiSpec = {
   info: {
     title: "OUTLINE 在庫管理API",
     description: "メンズアパレルセレクトショップ「OUTLINE」の在庫管理API",
-    version: "1.0.0",
+    version: "2.0.0",
   },
   servers: [
     { url: "https://inventory-management-api.seekseep.workers.dev", description: "Production" },
@@ -34,15 +34,24 @@ export const openApiSpec = {
         properties: {
           id: { type: "string" },
           name: { type: "string" },
-          sku: { type: "string" },
           description: { type: "string", nullable: true },
-          color: { type: "string", nullable: true },
-          size: { type: "string", nullable: true },
           type: { type: "string", enum: ["staple", "seasonal", "limited"] },
           status: { type: "string", enum: ["draft", "active", "on_sale", "discontinued"] },
           season: { type: "string", nullable: true },
           price: { type: "integer" },
           itemCategoryId: { type: "string" },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" },
+        },
+      },
+      ItemVariant: {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          itemId: { type: "string" },
+          sku: { type: "string" },
+          color: { type: "string", nullable: true },
+          size: { type: "string", nullable: true },
           createdAt: { type: "string", format: "date-time" },
           updatedAt: { type: "string", format: "date-time" },
         },
@@ -62,7 +71,7 @@ export const openApiSpec = {
         type: "object",
         properties: {
           id: { type: "string" },
-          itemId: { type: "string" },
+          itemVariantId: { type: "string" },
           locationId: { type: "string" },
           quantity: { type: "integer" },
           safetyStock: { type: "integer" },
@@ -85,7 +94,7 @@ export const openApiSpec = {
         properties: {
           id: { type: "string" },
           transactionId: { type: "string" },
-          itemId: { type: "string" },
+          itemVariantId: { type: "string" },
           quantity: { type: "integer" },
         },
       },
@@ -103,7 +112,7 @@ export const openApiSpec = {
         properties: {
           id: { type: "string" },
           snapshotId: { type: "string" },
-          itemId: { type: "string" },
+          itemVariantId: { type: "string" },
           quantity: { type: "integer", description: "実数" },
           expectedQuantity: { type: "integer", description: "理論値" },
         },
@@ -155,7 +164,7 @@ export const openApiSpec = {
       post: {
         tags: ["商品"],
         summary: "商品作成",
-        requestBody: { required: true, content: { "application/json": { schema: { type: "object", required: ["name", "sku", "type", "status", "price", "itemCategoryId"], properties: { name: { type: "string" }, sku: { type: "string" }, description: { type: "string" }, color: { type: "string" }, size: { type: "string" }, type: { type: "string", enum: ["staple", "seasonal", "limited"] }, status: { type: "string", enum: ["draft", "active", "on_sale", "discontinued"] }, season: { type: "string" }, price: { type: "integer" }, itemCategoryId: { type: "string" } } } } } },
+        requestBody: { required: true, content: { "application/json": { schema: { type: "object", required: ["name", "type", "status", "price", "itemCategoryId"], properties: { name: { type: "string" }, description: { type: "string" }, type: { type: "string", enum: ["staple", "seasonal", "limited"] }, status: { type: "string", enum: ["draft", "active", "on_sale", "discontinued"] }, season: { type: "string" }, price: { type: "integer" }, itemCategoryId: { type: "string" } } } } } },
         responses: { "201": { description: "Created", content: { "application/json": { schema: { type: "object", properties: { id: { type: "string" } } } } } } },
       },
     },
@@ -170,12 +179,49 @@ export const openApiSpec = {
         tags: ["商品"],
         summary: "商品更新",
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
-        requestBody: { required: true, content: { "application/json": { schema: { type: "object", properties: { name: { type: "string" }, sku: { type: "string" }, description: { type: "string" }, color: { type: "string" }, size: { type: "string" }, type: { type: "string" }, status: { type: "string" }, season: { type: "string" }, price: { type: "integer" }, itemCategoryId: { type: "string" } } } } } },
+        requestBody: { required: true, content: { "application/json": { schema: { type: "object", properties: { name: { type: "string" }, description: { type: "string" }, type: { type: "string" }, status: { type: "string" }, season: { type: "string" }, price: { type: "integer" }, itemCategoryId: { type: "string" } } } } } },
         responses: { "200": { description: "OK" } },
       },
       delete: {
         tags: ["商品"],
         summary: "商品削除",
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        responses: { "200": { description: "OK" } },
+      },
+    },
+    "/api/item-variants": {
+      get: {
+        tags: ["商品バリアント"],
+        summary: "バリアント一覧",
+        parameters: [
+          { name: "itemId", in: "query", schema: { type: "string" }, description: "商品IDで絞り込み" },
+        ],
+        responses: { "200": { description: "OK", content: { "application/json": { schema: { type: "array", items: { $ref: "#/components/schemas/ItemVariant" } } } } } },
+      },
+      post: {
+        tags: ["商品バリアント"],
+        summary: "バリアント作成",
+        requestBody: { required: true, content: { "application/json": { schema: { type: "object", required: ["itemId", "sku"], properties: { itemId: { type: "string" }, sku: { type: "string" }, color: { type: "string" }, size: { type: "string" } } } } } },
+        responses: { "201": { description: "Created", content: { "application/json": { schema: { type: "object", properties: { id: { type: "string" } } } } } } },
+      },
+    },
+    "/api/item-variants/{id}": {
+      get: {
+        tags: ["商品バリアント"],
+        summary: "バリアント取得",
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        responses: { "200": { description: "OK", content: { "application/json": { schema: { $ref: "#/components/schemas/ItemVariant" } } } }, "404": { description: "Not found" } },
+      },
+      put: {
+        tags: ["商品バリアント"],
+        summary: "バリアント更新",
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        requestBody: { required: true, content: { "application/json": { schema: { type: "object", properties: { itemId: { type: "string" }, sku: { type: "string" }, color: { type: "string" }, size: { type: "string" } } } } } },
+        responses: { "200": { description: "OK" } },
+      },
+      delete: {
+        tags: ["商品バリアント"],
+        summary: "バリアント削除",
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
         responses: { "200": { description: "OK" } },
       },
@@ -220,7 +266,7 @@ export const openApiSpec = {
         summary: "在庫一覧",
         parameters: [
           { name: "locationId", in: "query", schema: { type: "string" }, description: "拠点IDで絞り込み" },
-          { name: "itemId", in: "query", schema: { type: "string" }, description: "商品IDで絞り込み" },
+          { name: "itemVariantId", in: "query", schema: { type: "string" }, description: "バリアントIDで絞り込み" },
         ],
         responses: { "200": { description: "OK", content: { "application/json": { schema: { type: "array", items: { $ref: "#/components/schemas/Inventory" } } } } } },
       },
@@ -262,7 +308,7 @@ export const openApiSpec = {
                   toLocationId: { type: "string", description: "先拠点ID" },
                   type: { type: "string", enum: ["purchase", "transfer", "sale", "disposal"] },
                   note: { type: "string" },
-                  items: { type: "array", items: { type: "object", required: ["itemId", "quantity"], properties: { itemId: { type: "string" }, quantity: { type: "integer" } } } },
+                  items: { type: "array", items: { type: "object", required: ["itemVariantId", "quantity"], properties: { itemVariantId: { type: "string" }, quantity: { type: "integer" } } } },
                 },
               },
             },
@@ -298,7 +344,7 @@ export const openApiSpec = {
                 properties: {
                   locationId: { type: "string" },
                   note: { type: "string" },
-                  items: { type: "array", items: { type: "object", required: ["itemId", "quantity", "expectedQuantity"], properties: { itemId: { type: "string" }, quantity: { type: "integer", description: "実数" }, expectedQuantity: { type: "integer", description: "理論値" } } } },
+                  items: { type: "array", items: { type: "object", required: ["itemVariantId", "quantity", "expectedQuantity"], properties: { itemVariantId: { type: "string" }, quantity: { type: "integer", description: "実数" }, expectedQuantity: { type: "integer", description: "理論値" } } } },
                 },
               },
             },

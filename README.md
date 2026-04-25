@@ -136,12 +136,13 @@ inventory-management-api/
 │   ├── index.ts              # アプリケーションエントリポイント
 │   ├── openapi.ts            # OpenAPI 3.0 仕様定義
 │   ├── db/
-│   │   └── schema.ts         # Drizzle ORM スキーマ定義 (8テーブル)
+│   │   └── schema.ts         # Drizzle ORM スキーマ定義 (9テーブル)
 │   ├── middleware/
 │   │   └── auth.ts           # API キー認証ミドルウェア
 │   └── routes/
 │       ├── item-categories.ts # 商品カテゴリ CRUD
-│       ├── items.ts           # 商品SKU CRUD
+│       ├── items.ts           # 商品 CRUD
+│       ├── item-variants.ts   # 商品バリアント CRUD
 │       ├── locations.ts       # 拠点 CRUD
 │       ├── inventories.ts     # 在庫照会・更新
 │       ├── transactions.ts    # 在庫トランザクション（仕入/移動/販売/廃棄）
@@ -172,21 +173,22 @@ inventory-management-api/
 
 ## DB 設計
 
-8 テーブルで在庫管理ドメインを表現する。詳細は [docs/er-diagram.md](docs/er-diagram.md) を参照。
+9 テーブルで在庫管理ドメインを表現する。詳細は [docs/er-diagram.md](docs/er-diagram.md) を参照。
 
 ```mermaid
 erDiagram
     item_categories ||--o{ item_categories : "parent"
     item_categories ||--o{ items : "has"
-    items ||--o{ inventories : "stocked in"
+    items ||--o{ item_variants : "has variants"
+    item_variants ||--o{ inventories : "stocked in"
     locations ||--o{ inventories : "stores"
     locations ||--o{ inventory_transactions : "from"
     locations ||--o{ inventory_transactions : "to"
     inventory_transactions ||--o{ inventory_transaction_items : "contains"
-    items ||--o{ inventory_transaction_items : "moved"
+    item_variants ||--o{ inventory_transaction_items : "moved"
     locations ||--o{ inventory_snapshots : "counted at"
     inventory_snapshots ||--o{ inventory_snapshot_items : "contains"
-    items ||--o{ inventory_snapshot_items : "counted"
+    item_variants ||--o{ inventory_snapshot_items : "counted"
 
     item_categories {
         text id PK
@@ -196,11 +198,19 @@ erDiagram
 
     items {
         text id PK
-        text sku UK "SKU コード"
+        text name "商品名"
         text type "staple / seasonal / limited"
         text status "draft / active / on_sale / discontinued"
         integer price "販売価格"
         text item_category_id FK
+    }
+
+    item_variants {
+        text id PK
+        text item_id FK "商品ID"
+        text sku UK "SKU コード"
+        text color "カラー"
+        text size "サイズ"
     }
 
     locations {
@@ -211,7 +221,7 @@ erDiagram
 
     inventories {
         text id PK
-        text item_id FK
+        text item_variant_id FK
         text location_id FK
         integer quantity "現在数量"
         integer safety_stock "安全在庫数"
@@ -227,7 +237,7 @@ erDiagram
     inventory_transaction_items {
         text id PK
         text transaction_id FK
-        text item_id FK
+        text item_variant_id FK
         integer quantity "数量"
     }
 
@@ -240,7 +250,7 @@ erDiagram
     inventory_snapshot_items {
         text id PK
         text snapshot_id FK
-        text item_id FK
+        text item_variant_id FK
         integer quantity "実数"
         integer expected_quantity "理論値"
     }
@@ -251,17 +261,18 @@ erDiagram
 | テーブル | 役割 | ポイント |
 |---|---|---|
 | `item_categories` | 商品カテゴリ（階層構造） | `parent_id` による自己参照で無限階層に対応 |
-| `items` | 商品 SKU マスタ | タイプ・ステータスによるライフサイクル管理 |
+| `items` | 商品マスタ | タイプ・ステータス・価格などの共通属性を管理 |
+| `item_variants` | 商品バリアント（SKU） | 色・サイズの組み合わせを SKU 単位で管理 |
 | `locations` | 拠点（店舗/倉庫） | store / warehouse の2種類 |
-| `inventories` | 在庫（商品×拠点の組み合わせ） | トランザクションにより自動更新 |
+| `inventories` | 在庫（バリアント×拠点の組み合わせ） | トランザクションにより自動更新 |
 | `inventory_transactions` | 在庫トランザクション | 仕入/移動/販売/廃棄の4種類 |
-| `inventory_transaction_items` | トランザクション明細 | 1トランザクションに複数アイテム |
+| `inventory_transaction_items` | トランザクション明細 | 1トランザクションに複数バリアント |
 | `inventory_snapshots` | 棚卸しヘッダ | 拠点単位で実施 |
 | `inventory_snapshot_items` | 棚卸し明細 | 実数 vs 理論値の差異を記録 |
 
 ## API 設計
 
-RESTful な設計で 6 つのリソースを管理する。詳細は [docs/api.md](docs/api.md) を参照。
+RESTful な設計で 7 つのリソースを管理する。詳細は [docs/api.md](docs/api.md) を参照。
 
 | メソッド | エンドポイント | 説明 |
 |---|---|---|
@@ -275,12 +286,17 @@ RESTful な設計で 6 つのリソースを管理する。詳細は [docs/api.m
 | `GET` | `/api/items/:id` | 商品詳細 |
 | `PUT` | `/api/items/:id` | 商品更新 |
 | `DELETE` | `/api/items/:id` | 商品削除 |
+| `GET` | `/api/item-variants` | バリアント一覧（`itemId` でフィルタ可） |
+| `POST` | `/api/item-variants` | バリアント作成 |
+| `GET` | `/api/item-variants/:id` | バリアント詳細 |
+| `PUT` | `/api/item-variants/:id` | バリアント更新 |
+| `DELETE` | `/api/item-variants/:id` | バリアント削除 |
 | `GET` | `/api/locations` | 拠点一覧 |
 | `POST` | `/api/locations` | 拠点作成 |
 | `GET` | `/api/locations/:id` | 拠点詳細 |
 | `PUT` | `/api/locations/:id` | 拠点更新 |
 | `DELETE` | `/api/locations/:id` | 拠点削除 |
-| `GET` | `/api/inventories` | 在庫一覧（`locationId`, `itemId` でフィルタ可） |
+| `GET` | `/api/inventories` | 在庫一覧（`locationId`, `itemVariantId` でフィルタ可） |
 | `GET` | `/api/inventories/:id` | 在庫詳細 |
 | `PUT` | `/api/inventories/:id` | 在庫数量・安全在庫の更新 |
 | `GET` | `/api/transactions` | トランザクション一覧 |

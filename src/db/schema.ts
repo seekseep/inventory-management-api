@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 export const apiKeys = sqliteTable("api_keys", {
   id: text("id").primaryKey(),
@@ -21,10 +21,7 @@ export const itemCategories = sqliteTable("item_categories", {
 export const items = sqliteTable("items", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
-  sku: text("sku").notNull().unique(),
   description: text("description"),
-  color: text("color"),
-  size: text("size"),
   type: text("type", { enum: ["staple", "seasonal", "limited"] }).notNull(),
   status: text("status", {
     enum: ["draft", "active", "on_sale", "discontinued"],
@@ -34,6 +31,18 @@ export const items = sqliteTable("items", {
   itemCategoryId: text("item_category_id")
     .notNull()
     .references(() => itemCategories.id),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
+export const itemVariants = sqliteTable("item_variants", {
+  id: text("id").primaryKey(),
+  itemId: text("item_id")
+    .notNull()
+    .references(() => items.id),
+  sku: text("sku").notNull().unique(),
+  color: text("color"),
+  size: text("size"),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
 });
@@ -49,9 +58,9 @@ export const locations = sqliteTable("locations", {
 
 export const inventories = sqliteTable("inventories", {
   id: text("id").primaryKey(),
-  itemId: text("item_id")
+  itemVariantId: text("item_variant_id")
     .notNull()
-    .references(() => items.id),
+    .references(() => itemVariants.id),
   locationId: text("location_id")
     .notNull()
     .references(() => locations.id),
@@ -78,9 +87,9 @@ export const inventoryTransactionItems = sqliteTable(
     transactionId: text("transaction_id")
       .notNull()
       .references(() => inventoryTransactions.id),
-    itemId: text("item_id")
+    itemVariantId: text("item_variant_id")
       .notNull()
-      .references(() => items.id),
+      .references(() => itemVariants.id),
     quantity: integer("quantity").notNull(),
   }
 );
@@ -99,9 +108,9 @@ export const inventorySnapshotItems = sqliteTable("inventory_snapshot_items", {
   snapshotId: text("snapshot_id")
     .notNull()
     .references(() => inventorySnapshots.id),
-  itemId: text("item_id")
+  itemVariantId: text("item_variant_id")
     .notNull()
-    .references(() => items.id),
+    .references(() => itemVariants.id),
   quantity: integer("quantity").notNull(),
   expectedQuantity: integer("expected_quantity").notNull(),
 });

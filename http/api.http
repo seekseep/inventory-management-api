@@ -41,9 +41,6 @@ Content-Type: application/json
 
 {
   "name": "テストTシャツ",
-  "sku": "TEST-WHT-M",
-  "color": "ホワイト",
-  "size": "M",
   "type": "staple",
   "status": "active",
   "price": 4000,
@@ -52,6 +49,34 @@ Content-Type: application/json
 
 ### 商品取得
 GET {{baseUrl}}/api/items/item-000001
+X-API-Key: {{apiKey}}
+
+### ============================
+### 商品バリアント
+### ============================
+
+### バリアント一覧
+GET {{baseUrl}}/api/item-variants
+X-API-Key: {{apiKey}}
+
+### 商品IDで絞り込み
+GET {{baseUrl}}/api/item-variants?itemId=item-000001
+X-API-Key: {{apiKey}}
+
+### バリアント作成
+POST {{baseUrl}}/api/item-variants
+X-API-Key: {{apiKey}}
+Content-Type: application/json
+
+{
+  "itemId": "item-000001",
+  "sku": "TEST-WHT-M",
+  "color": "ホワイト",
+  "size": "M"
+}
+
+### バリアント取得
+GET {{baseUrl}}/api/item-variants/iv-000002
 X-API-Key: {{apiKey}}
 
 ### ============================
@@ -85,8 +110,8 @@ X-API-Key: {{apiKey}}
 GET {{baseUrl}}/api/inventories?locationId=loc-store-shibuya
 X-API-Key: {{apiKey}}
 
-### 商品別在庫
-GET {{baseUrl}}/api/inventories?itemId=item-000001
+### バリアント別在庫
+GET {{baseUrl}}/api/inventories?itemVariantId=iv-000002
 X-API-Key: {{apiKey}}
 
 ### ============================
@@ -111,8 +136,8 @@ Content-Type: application/json
   "type": "purchase",
   "note": "テスト仕入れ",
   "items": [
-    { "itemId": "item-000001", "quantity": 10 },
-    { "itemId": "item-000002", "quantity": 5 }
+    { "itemVariantId": "iv-000002", "quantity": 10 },
+    { "itemVariantId": "iv-000003", "quantity": 5 }
   ]
 }
 
@@ -127,7 +152,7 @@ Content-Type: application/json
   "type": "transfer",
   "note": "渋谷店へ補充",
   "items": [
-    { "itemId": "item-000001", "quantity": 3 }
+    { "itemVariantId": "iv-000002", "quantity": 3 }
   ]
 }
 
@@ -140,7 +165,7 @@ Content-Type: application/json
   "fromLocationId": "loc-store-shibuya",
   "type": "sale",
   "items": [
-    { "itemId": "item-000001", "quantity": 1 }
+    { "itemVariantId": "iv-000002", "quantity": 1 }
   ]
 }
 
@@ -154,7 +179,7 @@ Content-Type: application/json
   "type": "disposal",
   "note": "不良品廃棄",
   "items": [
-    { "itemId": "item-000002", "quantity": 2 }
+    { "itemVariantId": "iv-000003", "quantity": 2 }
   ]
 }
 
@@ -179,7 +204,7 @@ Content-Type: application/json
   "locationId": "loc-store-shibuya",
   "note": "月次棚卸し",
   "items": [
-    { "itemId": "item-000001", "quantity": 5, "expectedQuantity": 6 },
-    { "itemId": "item-000002", "quantity": 3, "expectedQuantity": 3 }
+    { "itemVariantId": "iv-000002", "quantity": 5, "expectedQuantity": 6 },
+    { "itemVariantId": "iv-000003", "quantity": 3, "expectedQuantity": 3 }
   ]
 }
