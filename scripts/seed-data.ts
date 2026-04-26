@@ -81,7 +81,7 @@ export const locations: LocationDef[] = [
 
 // --- カテゴリ ---
 export const categories: CategoryDef[] = [
-  { id: "cat-tops", parentId: null, name: "トップス", description: "Tシ���ツ、シャツ、ニット、パーカーなど" },
+  { id: "cat-tops", parentId: null, name: "トップス", description: "Tシャツ、シャツ、ニット、パーカーなど" },
   { id: "cat-bottoms", parentId: null, name: "ボトムス", description: "デニム、チノ、スラックス、ショーツなど" },
   { id: "cat-outerwear", parentId: null, name: "アウター", description: "ジャケット、コート、ブルゾンなど" },
   { id: "cat-accessories", parentId: null, name: "アクセサリー", description: "キャップ、バッグ、ベルト、ソックスなど" },
