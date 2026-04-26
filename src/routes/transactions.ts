@@ -1,11 +1,7 @@
 import { Hono } from "hono";
 import { drizzle } from "drizzle-orm/d1";
 import { eq } from "drizzle-orm";
-import {
-  inventoryTransactions,
-  inventoryTransactionItems,
-  inventories,
-} from "../db/schema";
+import { inventoryTransactions, inventoryTransactionItems, inventories } from "../db/schema";
 import type { Env } from "../index";
 
 export const transactionsRoute = new Hono<Env>();
@@ -82,9 +78,7 @@ transactionsRoute.post("/", async (c) => {
         .select()
         .from(inventories)
         .where(eq(inventories.itemVariantId, item.itemVariantId));
-      const fromInv = existing.find(
-        (inv) => inv.locationId === body.fromLocationId
-      );
+      const fromInv = existing.find((inv) => inv.locationId === body.fromLocationId);
       if (fromInv) {
         await db
           .update(inventories)
@@ -99,9 +93,7 @@ transactionsRoute.post("/", async (c) => {
         .select()
         .from(inventories)
         .where(eq(inventories.itemVariantId, item.itemVariantId));
-      const toInv = existing.find(
-        (inv) => inv.locationId === body.toLocationId
-      );
+      const toInv = existing.find((inv) => inv.locationId === body.toLocationId);
       if (toInv) {
         await db
           .update(inventories)

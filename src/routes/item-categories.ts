@@ -60,8 +60,6 @@ itemCategoriesRoute.put("/:id", async (c) => {
 
 itemCategoriesRoute.delete("/:id", async (c) => {
   const db = drizzle(c.env.DB);
-  await db
-    .delete(itemCategories)
-    .where(eq(itemCategories.id, c.req.param("id")));
+  await db.delete(itemCategories).where(eq(itemCategories.id, c.req.param("id")));
   return c.json({ success: true });
 });

@@ -11,10 +11,7 @@ itemVariantsRoute.get("/", async (c) => {
   const itemId = c.req.query("itemId");
 
   if (itemId) {
-    const results = await db
-      .select()
-      .from(itemVariants)
-      .where(eq(itemVariants.itemId, itemId));
+    const results = await db.select().from(itemVariants).where(eq(itemVariants.itemId, itemId));
     return c.json(results);
   }
 

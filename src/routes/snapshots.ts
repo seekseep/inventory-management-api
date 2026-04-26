@@ -16,10 +16,7 @@ snapshotsRoute.get("/:id", async (c) => {
   const db = drizzle(c.env.DB);
   const id = c.req.param("id");
 
-  const snapshot = await db
-    .select()
-    .from(inventorySnapshots)
-    .where(eq(inventorySnapshots.id, id));
+  const snapshot = await db.select().from(inventorySnapshots).where(eq(inventorySnapshots.id, id));
 
   if (snapshot.length === 0) return c.json({ error: "Not found" }, 404);
 

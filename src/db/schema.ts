@@ -80,19 +80,16 @@ export const inventoryTransactions = sqliteTable("inventory_transactions", {
   createdAt: text("created_at").notNull(),
 });
 
-export const inventoryTransactionItems = sqliteTable(
-  "inventory_transaction_items",
-  {
-    id: text("id").primaryKey(),
-    transactionId: text("transaction_id")
-      .notNull()
-      .references(() => inventoryTransactions.id),
-    itemVariantId: text("item_variant_id")
-      .notNull()
-      .references(() => itemVariants.id),
-    quantity: integer("quantity").notNull(),
-  }
-);
+export const inventoryTransactionItems = sqliteTable("inventory_transaction_items", {
+  id: text("id").primaryKey(),
+  transactionId: text("transaction_id")
+    .notNull()
+    .references(() => inventoryTransactions.id),
+  itemVariantId: text("item_variant_id")
+    .notNull()
+    .references(() => itemVariants.id),
+  quantity: integer("quantity").notNull(),
+});
 
 export const inventorySnapshots = sqliteTable("inventory_snapshots", {
   id: text("id").primaryKey(),

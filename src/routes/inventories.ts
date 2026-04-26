@@ -15,10 +15,7 @@ inventoriesRoute.get("/", async (c) => {
 
   if (locationId && itemVariantId) {
     query = query.where(
-      and(
-        eq(inventories.locationId, locationId),
-        eq(inventories.itemVariantId, itemVariantId)
-      )
+      and(eq(inventories.locationId, locationId), eq(inventories.itemVariantId, itemVariantId)),
     ) as typeof query;
   } else if (locationId) {
     query = query.where(eq(inventories.locationId, locationId)) as typeof query;
