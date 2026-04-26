@@ -12,7 +12,24 @@ export const transactionsRoute = new Hono<Env>();
 
 transactionsRoute.get("/", async (c) => {
   const db = drizzle(c.env.DB);
-  const results = await db.select().from(inventoryTransactions);
+  const transactions = await db.select().from(inventoryTransactions);
+  const allItems = await db.select().from(inventoryTransactionItems);
+
+  const itemsByTxId = new Map<string, (typeof allItems)[number][]>();
+  for (const item of allItems) {
+    const list = itemsByTxId.get(item.transactionId);
+    if (list) {
+      list.push(item);
+    } else {
+      itemsByTxId.set(item.transactionId, [item]);
+    }
+  }
+
+  const results = transactions.map((tx) => ({
+    ...tx,
+    items: itemsByTxId.get(tx.id) ?? [],
+  }));
+
   return c.json(results);
 });
 

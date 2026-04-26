@@ -78,13 +78,13 @@ DROP TABLE `inventory_snapshot_items`;
 ALTER TABLE `inventory_snapshot_items_new` RENAME TO `inventory_snapshot_items`;
 --> statement-breakpoint
 
--- 6. items テーブルから sku, color, size カラムを削除（SQLite は DROP COLUMN 対応）
+-- 6. 古い unique index を削除（DROP COLUMN の前に実行する必要がある）
+DROP INDEX IF EXISTS `items_sku_unique`;
+--> statement-breakpoint
+
+-- 7. items テーブルから sku, color, size カラムを削除（SQLite は DROP COLUMN 対応）
 ALTER TABLE `items` DROP COLUMN `sku`;
 --> statement-breakpoint
 ALTER TABLE `items` DROP COLUMN `color`;
 --> statement-breakpoint
 ALTER TABLE `items` DROP COLUMN `size`;
---> statement-breakpoint
-
--- 7. 古い unique index を削除
-DROP INDEX IF EXISTS `items_sku_unique`;
